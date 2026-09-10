@@ -33,3 +33,5 @@ offline shell — data still lives only in that browser.
 ## License
 
 MIT — see `LICENSE`.
+
+<!-- trigger initial Pages build -->
