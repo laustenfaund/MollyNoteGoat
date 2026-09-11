@@ -6,5 +6,6 @@ Emoji goat (U+1F410 🐐), © Google LLC, licensed under the
 
 Source: https://github.com/googlefonts/noto-emoji
 
-Rendered here with a transparent-safe-zone crop (inner ~78%) on the app's
-`#FFFCF5` background so it isn't clipped when used as a maskable icon.
+Rendered here with a safe-zone crop (inner ~78%) so it isn't clipped when
+used as a maskable icon, on the app's own striped background (the same
+muted stripe pattern used elsewhere in the UI) rather than a solid color.
