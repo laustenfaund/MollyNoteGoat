@@ -23,10 +23,9 @@ should ever need to appear in code.
 
 ## What this is
 
-A customized deployment of the Note Goat app/codebase for Molly, used to
-track care-related information for a family member. Scope is deliberately
-limited to that one purpose — don't expand it on your own initiative;
-check with the user first.
+A customized deployment of the Note Goat app/codebase for Molly. Scope is
+deliberately limited — don't expand it on your own initiative; check with
+the user first.
 
 ## Where the work lives
 
