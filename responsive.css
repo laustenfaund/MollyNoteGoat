@@ -1,0 +1,62 @@
+/* ---------- Portrait and landscape (phones and tablets) ----------
+   Added 2026-09-24. Desktop layout above is unchanged; these rules only
+   take over on narrow screens (phone portrait) and short screens
+   (phone landscape). */
+
+/* Phone portrait / narrow windows: sidebar becomes a compact top bar —
+   brand, then Home + modules as one sideways-scrolling row, then the
+   Library / Manual / Settings buttons side by side. */
+@media (max-width: 700px){
+  body{padding:0;}
+  .shell{flex-direction:column;border-radius:0;min-height:100vh;min-height:100dvh;box-shadow:none;}
+  .sidebar{
+    width:100%;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;
+    padding-top:env(safe-area-inset-top,0px);
+  }
+  .brand{grid-column:1 / -1;padding:12px 14px 8px;}
+  .brand-inner{flex-direction:row;align-items:center;justify-content:space-between;gap:8px;}
+  .brand-sub{margin-top:0;}
+  .nav-label{display:none;}
+  .nav-section{padding:4px 0 8px 12px;}
+  .nav-section .nav-btn{width:auto;white-space:nowrap;}
+  nav.module-list{
+    display:flex;gap:4px;overflow-x:auto;overflow-y:hidden;padding:4px 12px 8px 6px;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  }
+  nav.module-list::-webkit-scrollbar{display:none;}
+  .module-row{flex-shrink:0;margin-bottom:0;}
+  .module-row .nav-btn{white-space:nowrap;}
+  .sidebar-footer{grid-column:1 / -1;display:flex;gap:6px;padding:0 12px 12px;}
+  .sidebar-footer .btn-library{margin-top:0 !important;padding:8px 6px;}
+  .main{max-width:none;width:100%;padding:16px 14px calc(40px + env(safe-area-inset-bottom,0px));overflow:visible;}
+  .tpl-grid{grid-template-columns:1fr;}
+  table.record-table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .modal-backdrop{padding:10px;}
+  .modal-body{max-height:70vh;max-height:70dvh;}
+  .manual-overlay{padding:0;}
+  .manual-overlay-box{height:100vh;height:100dvh;border-radius:0;}
+}
+
+/* Phone landscape / short windows: keep the sidebar on the left but let
+   the whole sidebar scroll, so the Library / Manual / Settings buttons are
+   always reachable, and give the content the rest of the width. */
+@media (max-height: 520px) and (orientation: landscape){
+  body{padding:0;}
+  .shell{border-radius:0;min-height:100vh;min-height:100dvh;box-shadow:none;}
+  .sidebar{
+    width:216px;position:sticky;top:0;align-self:flex-start;
+    height:100vh;height:100dvh;overflow-y:auto;
+    padding-left:env(safe-area-inset-left,0px);
+  }
+  .sidebar > *{flex-shrink:0;}
+  .brand{padding:12px 12px 8px;}
+  .brand-inner{align-items:flex-start;}
+  nav.module-list{flex:none;overflow:visible;padding:4px 8px;}
+  .nav-section{padding:4px 8px;}
+  .nav-btn{padding:6px 9px;}
+  .main{max-width:none;padding:14px 20px 30px;padding-right:calc(20px + env(safe-area-inset-right,0px));overflow:visible;}
+  .modal-backdrop{padding:8px;}
+  .modal-body{max-height:58vh;max-height:58dvh;}
+  .manual-overlay{padding:0;}
+  .manual-overlay-box{height:100vh;height:100dvh;border-radius:0;}
+}
