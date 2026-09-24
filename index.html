@@ -1714,6 +1714,20 @@ function buildRecordFooter(mod, rec, draft){
    ========================================================= */
 let googleRt = { tokenClient: null, accessToken: null, connected: false, initPending: false };
 
+/* Built-in Google connection — the repo owner's Google Cloud project (shared
+   with Musings Studio). Once these two values are filled in, Molly never
+   sees or enters any Google keys: she just taps Connect and signs in with
+   her own Google account. Her synced files still go only to her own Drive
+   and Calendar. While they're left as placeholders, Settings falls back to
+   the old fields for entering a Client ID and API key by hand. */
+const BUILTIN_GOOGLE = {
+  clientId: 'PASTE_CLIENT_ID_HERE.apps.googleusercontent.com',
+  apiKey:   'PASTE_API_KEY_HERE',
+};
+function builtinGoogleReady(){ return !/^PASTE/.test(BUILTIN_GOOGLE.clientId) && !/^PASTE/.test(BUILTIN_GOOGLE.apiKey); }
+function googleClientId(){ return builtinGoogleReady() ? BUILTIN_GOOGLE.clientId : (state.settings.googleClientId || ''); }
+function googleApiKey(){ return builtinGoogleReady() ? BUILTIN_GOOGLE.apiKey : (state.settings.googleApiKey || ''); }
+
 function openConnectionsModal(){
   openModal('Settings', (body) => {
     body.appendChild(el('div', 'tpl-group-label', 'Connections'));
@@ -1729,30 +1743,34 @@ function openConnectionsModal(){
     body.appendChild(aGrp);
 
     body.appendChild(el('div', 'tpl-group-label', 'Google — for Sheets / Docs / Calendar sync'));
-    body.appendChild(el('div', 'field-hint', 'Requires your own free Google Cloud project with the Sheets, Drive, Docs, and Calendar APIs enabled, and an OAuth Client ID + API key from it.'));
+    if (builtinGoogleReady()){
+      body.appendChild(el('div', 'field-hint', 'Built in — nothing to enter. Tap Connect and sign in with your Google account. This app can only see the files it creates in your Drive, plus the calendar events it adds.'));
+    } else {
+      body.appendChild(el('div', 'field-hint', 'Requires your own free Google Cloud project with the Sheets, Drive, Docs, and Calendar APIs enabled, and an OAuth Client ID + API key from it.'));
 
-    const cGrp = el('div', 'field-group');
-    cGrp.appendChild(el('label', 'field-label', 'OAuth Client ID'));
-    const cInput = document.createElement('input'); cInput.type = 'text'; cInput.className = 'field-input';
-    cInput.value = state.settings.googleClientId || ''; cInput.oninput = () => { state.settings.googleClientId = cInput.value.trim(); saveState(); };
-    cGrp.appendChild(cInput);
-    body.appendChild(cGrp);
+      const cGrp = el('div', 'field-group');
+      cGrp.appendChild(el('label', 'field-label', 'OAuth Client ID'));
+      const cInput = document.createElement('input'); cInput.type = 'text'; cInput.className = 'field-input';
+      cInput.value = state.settings.googleClientId || ''; cInput.oninput = () => { state.settings.googleClientId = cInput.value.trim(); saveState(); };
+      cGrp.appendChild(cInput);
+      body.appendChild(cGrp);
 
-    const kGrp = el('div', 'field-group');
-    kGrp.appendChild(el('label', 'field-label', 'API key'));
-    const kInput = document.createElement('input'); kInput.type = 'password'; kInput.className = 'field-input';
-    kInput.value = state.settings.googleApiKey || ''; kInput.oninput = () => { state.settings.googleApiKey = kInput.value.trim(); saveState(); };
-    kGrp.appendChild(kInput);
-    body.appendChild(kGrp);
+      const kGrp = el('div', 'field-group');
+      kGrp.appendChild(el('label', 'field-label', 'API key'));
+      const kInput = document.createElement('input'); kInput.type = 'password'; kInput.className = 'field-input';
+      kInput.value = state.settings.googleApiKey || ''; kInput.oninput = () => { state.settings.googleApiKey = kInput.value.trim(); saveState(); };
+      kGrp.appendChild(kInput);
+      body.appendChild(kGrp);
+    }
 
     const statusRow = el('div', 'field-hint');
     statusRow.id = 'googleStatusRow';
     statusRow.textContent = googleRt.connected ? 'Google: connected for this session.' :
-      (state.settings.googleClientId ? 'Google: configured, not signed in yet.' : 'Google: not configured.');
+      (googleClientId() ? 'Google: ready, not signed in yet.' : 'Google: not configured.');
     body.appendChild(statusRow);
 
     const connectBtn = buttonEl('Connect / Sign in to Google', 'btn-secondary', () => {
-      if (!state.settings.googleClientId || !state.settings.googleApiKey){ alert('Enter both the Client ID and API key first.'); return; }
+      if (!googleClientId() || !googleApiKey()){ statusRow.textContent = 'Google: enter both the Client ID and API key first.'; return; }
       statusRow.textContent = 'Connecting…';
       tryInitGoogle(true,
         () => { statusRow.textContent = 'Google: connected for this session.'; },
@@ -1908,7 +1926,7 @@ function showToast(text){
 
 function tryInitGoogle(promptSignIn, onConnected, onFailed, _attempt){
   _attempt = _attempt || 0;
-  if (!state.settings.googleClientId || !state.settings.googleApiKey){
+  if (!googleClientId() || !googleApiKey()){
     if (onFailed) onFailed('Google isn\'t configured — add a Client ID and API key under Connections first.');
     return;
   }
@@ -1930,7 +1948,7 @@ function tryInitGoogle(promptSignIn, onConnected, onFailed, _attempt){
   gapi.load('client', async () => {
     try {
       await gapi.client.init({
-        apiKey: state.settings.googleApiKey,
+        apiKey: googleApiKey(),
         discoveryDocs: [
           'https://sheets.googleapis.com/$discovery/rest?version=v4',
           'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
@@ -1944,8 +1962,9 @@ function tryInitGoogle(promptSignIn, onConnected, onFailed, _attempt){
       return;
     }
     googleRt.tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: state.settings.googleClientId,
-      scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar.events',
+      client_id: googleClientId(),
+      // drive.file = only files this app creates (its folder, sheet and docs), never the rest of her Drive.
+      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events',
       callback: (resp) => {
         if (resp.access_token){
           googleRt.accessToken = resp.access_token;
@@ -2059,7 +2078,7 @@ function syncStatus(box, text, isError){
 }
 
 async function runSync(mod, target, statusBox){
-  if (!state.settings.googleClientId || !state.settings.googleApiKey){
+  if (!googleClientId() || !googleApiKey()){
     syncStatus(statusBox, 'Google isn\'t configured yet — add your Client ID and API key under Connections first.', true);
     return;
   }
@@ -2103,7 +2122,23 @@ async function findOrCreateFolder(name, parentId){
   return createRes.result.id;
 }
 
+// A sheet or doc made under a different Google connection (e.g. the old
+// hand-entered keys) isn't visible to this one — start a fresh file instead
+// of failing forever. Returns null when the file needs to be recreated.
+async function getOrForget(getter){
+  try { return await getter(); }
+  catch(e){
+    const code = e && (e.status || (e.result && e.result.error && e.result.error.code));
+    if (code === 403 || code === 404) return null;
+    throw e;
+  }
+}
+
 async function syncModuleToSheets(mod){
+  if (state.settings.spreadsheetId &&
+      !(await getOrForget(() => gapi.client.sheets.spreadsheets.get({ spreadsheetId: state.settings.spreadsheetId })))){
+    state.settings.spreadsheetId = '';
+  }
   if (!state.settings.spreadsheetId){
     const folderId = await findOrCreateFolder('Molly\'s Note Goat', null);
     const res = await gapi.client.sheets.spreadsheets.create({ properties: { title: 'Molly\'s Note Goat Sync' } });
@@ -2131,6 +2166,7 @@ async function syncModuleToSheets(mod){
 }
 
 async function syncModuleToDocx(mod){
+  if (mod.docId && !(await getOrForget(() => gapi.client.docs.documents.get({ documentId: mod.docId })))) mod.docId = '';
   if (!mod.docId){
     const folderId = await findOrCreateFolder('Molly\'s Note Goat', null);
     const res = await gapi.client.docs.documents.create({ resource: { title: 'Molly\'s Note Goat — ' + mod.name } });
@@ -2452,7 +2488,7 @@ body.mode-full .detail-simple{display:none;}
         <p>The ⚙ Settings button (sidebar) holds two keys, both stored only in this browser and used only for the direct calls this app makes:</p>
         <ol class="steps">
           <li><b>Anthropic API key</b> — powers Quick Capture's AI cleanup and AI-assisted module creation.</li>
-          <li><b>Google Client ID + API key</b>, from your own free Google Cloud project — powers Sync. Click Connect / Sign in each session; the sign-in itself doesn't persist across a reload, by design.</li>
+          <li><b>Google</b> — built into the app by the repo owner, so there's nothing to enter. Click Connect / Sign in each session; the sign-in itself doesn't persist across a reload, by design. (If the built-in connection isn't filled in yet, this screen asks for a Client ID and API key instead.)</li>
         </ol>
         </div>
       </section>
